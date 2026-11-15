@@ -21,7 +21,7 @@ Replace this placeholder with the user's real vault path:
 - `ARCHIVE_DIR`: *(optional)* vault-relative folder with archived conversations, e.g. `Chats`
 - `MEMORY_PACK`: *(optional)* path to a generated memory pack, e.g. `MEMORY_PACK.md`
 
-If `VAULT` is still the placeholder `__VAULT_PATH__`, the skill is not configured: ask the user for the vault path once, then search. Do not guess the path.
+If `VAULT` is missing, empty, or still the template placeholder: the skill is not configured — ask the user for the vault path once, then search. Do not guess the path.
 
 ## 1. Every turn: choose the memory access mode
 
