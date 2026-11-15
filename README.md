@@ -160,6 +160,10 @@ LICENSE                          # MIT
 
 [MIT](LICENSE)
 
+## 🔗 相关项目
+
+- [mubu-memory](https://github.com/ImportMyBrain/mubu-memory) —— 同样的思路，笔记在幕布（Mubu）的版本。
+
 ---
 
 如果这个 skill 帮你省下了每次重新解释自己的时间，欢迎点个 ⭐。
@@ -263,3 +267,7 @@ The pack (~40 KB) contains profile, goals, active projects, recent notes and a f
 ## License
 
 [MIT](LICENSE)
+
+## Related
+
+- [mubu-memory](https://github.com/ImportMyBrain/mubu-memory) — the same idea for Mubu (幕布) notes.
