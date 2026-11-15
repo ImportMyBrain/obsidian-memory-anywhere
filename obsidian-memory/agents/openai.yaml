@@ -1,0 +1,7 @@
+interface:
+  display_name: "Obsidian Memory"
+  short_description: "Search a local Obsidian vault before answering"
+  default_prompt: "Use $obsidian-memory to recall relevant notes from my Obsidian vault before answering."
+
+policy:
+  allow_implicit_invocation: true

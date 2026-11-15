@@ -1,0 +1,8 @@
+MEMORY_PACK*.md
+node_modules/
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+.idea/
+.vscode/
