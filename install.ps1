@@ -106,9 +106,11 @@ if (-not $Vault) {
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  1. Restart your AI client (Claude Code / Codex / Cursor / Copilot / Gemini CLI) so it rescans skills."
-Write-Host "  2. For always-on behavior, add the rule from obsidian-memory\references\always-on.md to"
+Write-Host "  2. Build the digest + index once (and after major vault changes):"
+Write-Host "     node obsidian-memory\scripts\memory-build.mjs --vault `"$Vault`" --archive `"Chats`""
+Write-Host "  3. For always-on behavior, add the rule from obsidian-memory\references\always-on.md to"
 Write-Host "     AGENTS.md / CLAUDE.md / GEMINI.md / .cursor/rules / .github/copilot-instructions.md."
-Write-Host "  3. Chat-only clients (ChatGPT web / Claude.ai / mobile):"
+Write-Host "  4. Chat-only clients (ChatGPT web / Claude.ai / mobile):"
 Write-Host "     node obsidian-memory\scripts\memory-pack.mjs --vault `"$Vault`" --out MEMORY_PACK.md"
 Write-Host "     then attach MEMORY_PACK.md to a Project or chat."
 Write-Host ""

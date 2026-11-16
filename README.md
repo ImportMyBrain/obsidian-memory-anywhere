@@ -18,19 +18,37 @@
 - 你明明在 Obsidian 里记了目标、偏好、项目进度，它却像第一次见你；
 - 每次都要重新贴背景，贴完还是模板化回答。
 
-这个 Skill 把「先查记忆，再回答」变成固定流程：**每次回答前，先检索你的 Obsidian 库，判断哪些记忆还有效，整合进答案，然后才开口。**
+这个 Skill 把「先查记忆，再回答」变成固定流程：**每次回答前，先分级检索你的 Obsidian 库，判断哪些记忆还有效，整合进答案，然后才开口。**
+
+## 🆕 v2.0：分级检索（省 token）
+
+记忆变多后，**不再全库 grep + 整篇读**，改成 0 → 3 级：
+
+| 级别 | 读什么 | 目标大小 |
+| --- | --- | --- |
+| **0 小抄** | `.memory/MEMORY_DIGEST.md`：入口、偏好、目标、当前项目、最近更新 | ~2–3 KB |
+| **1 索引** | `memory-search.mjs` 返回 top 3–5 条（标题/路径/日期/摘要） | ≤2 KB |
+| **2 片段** | 候选笔记前 60–80 行，或关键词定位后读 ±20 行 | ≤1.5 KB/篇 |
+| **3 原文** | 只有必要时才读整篇，最多 1–2 篇 | ≤8 KB/篇 |
+
+- **实测**：搜“项目”从全库 grep 的约 17 KB 输出，降到 **0.5–0.8 KB** 的索引结果；每轮记忆读取约 **5–8 KB**。
+- 笔记从 184 篇涨到几千篇，每轮成本基本恒定（小抄 + top-k，而不是全库）。
+- 归档/历史笔记（`ARCHIVE_DIRS`）默认不参与；只有问“之前聊过 / 上次说”才加 `--include-cold` 查。
+- 升级方式：重新安装本 skill（会自动带上 `scripts/`），然后跑一次 `memory-build` 生成小抄和索引。
 
 ## ✨ 它做了什么
 
 | 步骤 | 说明 |
 | --- | --- |
-| 1. 抽关键词 | 从问题里识别项目、课程、人物、目标、时间、专有名词，做同义扩展 |
-| 2. 判断能力 | 当前 AI 能读本地文件 → 直接查库；不能 → 用你上传的 `MEMORY_PACK.md` 快照 |
-| 3. 检索库 | 用客户端自带的搜索 / 读取工具，只读 `*.md`，跳过 `.obsidian/`、附件、系统目录 |
-| 4. 判断记忆 | 直接相关 / 背景相关 / 历史快照 / 无关；冲突时以较新的笔记为准 |
-| 5. 整合回答 | 记忆影响结论、优先级、语气和例子；引用来源与日期，区分事实和推断 |
-| 6. 必要时写回 | 只有出现新事实才更新主笔记并加 `[[双链]]`，没新信息不动库 |
-| 7. 查不到时 | 一句话说明「没查到相关记录」，然后正常回答；绝不编造记忆 |
+| 0. 先看小抄 | `.memory/MEMORY_DIGEST.md`：个人偏好 / 目标 / 当前项目 / 最近更新（~2–3 KB） |
+| 1. 查索引 | `memory-search.mjs` 返回 top 3–5 条摘要，而不是全库 grep |
+| 2. 读片段 | 候选笔记前 60–80 行，或定位关键词后读上下文 |
+| 3. 读原文 | 只有必要时，最多 1–2 篇 |
+| 判断记忆 | 直接相关 / 背景相关 / 历史快照（冷数据）/ 无关；冲突时以较新的笔记为准 |
+| 整合回答 | 记忆影响结论、优先级、语气和例子；引用来源与日期，区分事实和推断 |
+| 必要时写回 | 只有出现新事实才更新主笔记并加 `[[双链]]`，没新信息不动库 |
+| 查不到时 | 一句话说明「没查到相关记录」，然后正常回答；绝不编造记忆 |
+| 会话缓存 | skill 每会话只加载一次；同一话题追问复用上一轮结果 |
 
 ## 📦 兼容性
 
@@ -98,12 +116,24 @@ cd obsidian-memory-anywhere
 
 ```markdown
 - `VAULT`: `D:\Obsidian\MyVault`   # 你的库根目录（必填）
-- `PROFILE_DIR`: `Profile`         # 个人档案 / 偏好目录（可选，相对 VAULT）
-- `ARCHIVE_DIR`: `Chats`           # 历史归档目录（可选）
+- `MEMORY_DIR`: `<VAULT>/.memory`  # 小抄 / 索引目录（默认）
+- `ARCHIVE_DIRS`: `Chats`          # 冷数据目录（可选，可多个）
 - `MEMORY_PACK`: `MEMORY_PACK.md`  # 给无文件权限的 AI 用的快照（可选）
 ```
 
 `PROFILE_DIR` 里建议放一份「关于我 / 我的偏好」的笔记，检索时先读它，回答会更贴合你。
+
+生成小抄 / 索引（首次安装或库有大改动后跑一次）：
+
+```bash
+node obsidian-memory/scripts/memory-build.mjs --vault "D:\Obsidian\MyVault" --archive "Chats"
+```
+
+日常检索用：
+
+```bash
+node obsidian-memory/scripts/memory-search.mjs --vault "D:\Obsidian\MyVault" --query "关键词1 关键词2" --top 5
+```
 
 ## 🔁 让它每轮自动生效（推荐）
 
@@ -111,14 +141,14 @@ Skill 默认按需加载。想让它**每次回答前都自动跑**，在客户�
 
 ```markdown
 ## Obsidian memory first (every turn)
-Before answering any message, load the `obsidian-memory` skill and search the local Obsidian vault for relevant notes, then integrate those memories into the answer. Do this for new chats, follow-ups, simple questions and short messages too.
+Load the `obsidian-memory` skill once per session, then reuse it. Before answering any message: read `.memory/MEMORY_DIGEST.md` first; if it is not enough, search the index with `memory-search.mjs`; if needed, read a note excerpt; only read full notes when necessary (max 1–2). Do not grep the whole vault and do not re-read the digest every turn.
 ```
 
 各客户端的文件对应关系（`AGENTS.md` / `CLAUDE.md` / `GEMINI.md` / `.cursor/rules` / `.github/copilot-instructions.md` / 自定义指令）见 [always-on.md](obsidian-memory/references/always-on.md)。
 
 ## 💬 给没有本地文件权限的 AI 用（ChatGPT 网页 / Claude.ai / 手机）
 
-这些客户端读不到你电脑上的文件，用 **Memory Pack**：
+这些客户端读不到你电脑上的文件，用 **Memory Pack**（实时客户端优先用“小抄 + 索引”，pack 主要给聊天型客户端）：
 
 ```bash
 node obsidian-memory/scripts/memory-pack.mjs --vault "D:\Obsidian\MyVault" --out MEMORY_PACK.md
@@ -136,17 +166,24 @@ node obsidian-memory/scripts/memory-pack.mjs --vault "D:\Obsidian\MyVault" --out
 
 ```
 obsidian-memory/                 # 可安装的 skill 本体
-├── SKILL.md                     # 主流程（含能力分级：查库 / 用 pack / 无记忆）
+├── SKILL.md                     # 主流程（分级检索：小抄 / 索引 / 片段 / 原文）
 ├── references/
 │   ├── always-on.md             # 各客户端「每轮强制」配置
 │   └── memory-pack.md           # Memory Pack 用法
 ├── scripts/
-│   └── memory-pack.mjs          # 导出记忆快照（Node 18+，零依赖）
+│   ├── memory-build.mjs         # 生成小抄 + 索引（Level 0/1）
+│   ├── memory-search.mjs        # 检索索引，返回 top-k 摘要
+│   └── memory-pack.mjs          # 给聊天型客户端的记忆快照
 └── agents/
     └── openai.yaml              # ChatGPT / Codex 的界面元数据（可选）
 install.ps1 / install.sh         # Windows / macOS+Linux 安装脚本
 README.md                        # 中英双语说明（中文在前）
 LICENSE                          # MIT
+
+<vault>/.memory/                 # 生成物（不是仓库文件）
+├── MEMORY_DIGEST.md             # Level 0 小抄（每轮先读）
+├── MEMORY_INDEX.md              # Level 1 可读索引
+└── index.json                   # Level 1 机器索引（memory-search 用）
 ```
 
 ## 🔒 隐私
@@ -163,6 +200,13 @@ LICENSE                          # MIT
 ## 🔗 相关项目
 
 - [mubu-memory](https://github.com/ImportMyBrain/mubu-memory) —— 同样的思路，笔记在幕布（Mubu）的版本。
+
+## 🧾 版本
+
+| 版本 | 日期 | 变化 |
+| --- | --- | --- |
+| **v2.0.0** | 2026-11-16 | 分级检索（小抄 → 索引 → 片段 → 原文）；新增 `memory-build.mjs` / `memory-search.mjs`；冷归档默认排除；skill 每会话只加载一次 |
+| v1.0.0 | 2026-11-13 | 首个公开版本：每轮检索 Obsidian |
 
 ---
 
@@ -184,19 +228,35 @@ Built on the [Agent Skills open standard](https://agentskills.io/specification):
 
 Chats drift. The assistant forgets last month's project details, even though you wrote everything down in Obsidian. You end up re-explaining your context in every conversation — and still get generic answers.
 
-`obsidian-memory` makes "recall first, answer second" a fixed workflow: **before every answer, search the vault, judge what's current, weave it into the answer.**
+`obsidian-memory` makes "recall first, answer second" a fixed workflow: **before every answer, recall in tiers — digest → index → excerpt → full note — and weave it into the answer.**
+
+### New in v2.0 — tiered recall (token-efficient)
+
+| Level | What to read | Target size |
+| --- | --- | --- |
+| **0 digest** | `.memory/MEMORY_DIGEST.md` — profile, goals, active projects, recent updates | ~2–3 KB |
+| **1 index** | `memory-search.mjs` returns top 3–5 rows (title/path/date/summary) | ≤2 KB |
+| **2 excerpt** | first 60–80 lines of a candidate note, or ±20 lines around a keyword hit | ≤1.5 KB/note |
+| **3 full note** | only when necessary, max 1–2 notes | ≤8 KB/note |
+
+- Measured on a 184-note vault: searching "project" drops from ~17 KB of raw grep output to **0.5–0.8 KB** of index results; per-turn recall is ~5–8 KB.
+- Cost stays roughly constant as the vault grows (digest + top-k instead of the whole vault).
+- Archive/history folders (`ARCHIVE_DIRS`) are excluded by default; add `--include-cold` only when the user asks about past conversations.
+- Upgrade: reinstall the skill (scripts included), then run `memory-build` once.
 
 ## What it does
 
 | Step | Detail |
 | --- | --- |
-| 1. Extract keywords | People, projects, courses, goals, dates, proper nouns — plus synonyms |
-| 2. Detect capability | Local file access → search the vault; no file access → use an attached `MEMORY_PACK.md` |
-| 3. Search | Use the client's own search/read tools; only `*.md`, skip `.obsidian/`, attachments, system folders |
-| 4. Judge memories | Direct / background / historical snapshot / irrelevant; newer notes win conflicts |
-| 5. Integrate | Memory shapes conclusions, priorities, tone and examples; cite source and date |
-| 6. Write back | Only when there is genuinely new information; add `[[links]]` |
-| 7. No match | Say so in one line and answer normally; never fabricate memories |
+| 0. Digest first | `.memory/MEMORY_DIGEST.md`: profile / goals / active projects / recent notes (~2–3 KB) |
+| 1. Search index | `memory-search.mjs` returns top 3–5 summaries instead of grepping the whole vault |
+| 2. Read excerpt | first 60–80 lines of a candidate note, or ±20 lines around a keyword hit |
+| 3. Read full note | only when necessary, max 1–2 notes |
+| Judge memories | Direct / background / historical snapshot (cold) / irrelevant; newer notes win conflicts |
+| Integrate | Memory shapes conclusions, priorities, tone and examples; cite source and date |
+| Write back | Only when there is genuinely new information; add `[[links]]` |
+| No match | Say so in one line and answer normally; never fabricate memories |
+| Session cache | Load the skill once per session; reuse previous results for same-topic follow-ups |
 
 ## Compatibility
 
@@ -238,18 +298,30 @@ Edit section 0 of `obsidian-memory/SKILL.md`:
 
 ```markdown
 - `VAULT`: `D:\Obsidian\MyVault`   # required
-- `PROFILE_DIR`: `Profile`         # optional, relative to VAULT
-- `ARCHIVE_DIR`: `Chats`           # optional
+- `MEMORY_DIR`: `<VAULT>/.memory`  # generated digest / index (default)
+- `ARCHIVE_DIRS`: `Chats`          # cold folders (optional)
 - `MEMORY_PACK`: `MEMORY_PACK.md`  # optional, for chat-only clients
+```
+
+Build the digest and index once (and after major vault changes):
+
+```bash
+node obsidian-memory/scripts/memory-build.mjs --vault "D:\Obsidian\MyVault" --archive "Chats"
+```
+
+Daily search:
+
+```bash
+node obsidian-memory/scripts/memory-search.mjs --vault "D:\Obsidian\MyVault" --query "keyword1 keyword2" --top 5
 ```
 
 ## Run it every turn
 
-Add the rule from [always-on.md](obsidian-memory/references/always-on.md) to your client's always-on instruction file (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursor/rules/`, `.github/copilot-instructions.md`, custom instructions, …).
+Add the rule from [always-on.md](obsidian-memory/references/always-on.md) to your client's always-on instruction file (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursor/rules/`, `.github/copilot-instructions.md`, custom instructions, …). Load the skill once per session and reuse it.
 
 ## Chat-only clients
 
-For ChatGPT web, Claude.ai and mobile apps, generate a memory pack and attach it to a Project or chat:
+For ChatGPT web, Claude.ai and mobile apps, generate a memory pack and attach it to a Project or chat (live clients should prefer digest + index):
 
 ```bash
 node obsidian-memory/scripts/memory-pack.mjs --vault "D:\Obsidian\MyVault" --out MEMORY_PACK.md
@@ -263,6 +335,13 @@ The pack (~40 KB) contains profile, goals, active projects, recent notes and a f
 - Skips `.obsidian/`, system folders and binary attachments.
 - `MEMORY_PACK.md` is plain text with note excerpts — keep it local and out of commits (the repo `.gitignore` ignores `MEMORY_PACK*.md`).
 - All examples in this repository are generic — no real notes or personal paths.
+
+## Version
+
+| Version | Date | Change |
+| --- | --- | --- |
+| **v2.0.0** | 2026-11-16 | Tiered recall (digest → index → excerpt → full note); `memory-build.mjs` / `memory-search.mjs`; cold archives excluded by default; load skill once per session |
+| v1.0.0 | 2026-11-13 | First public release |
 
 ## License
 

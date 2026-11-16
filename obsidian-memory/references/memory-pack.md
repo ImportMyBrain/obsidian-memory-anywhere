@@ -2,6 +2,8 @@
 
 Some clients — ChatGPT on the web, Claude.ai, mobile apps, cloud agents — cannot read files on your computer. For those, generate a **memory pack**: a single Markdown snapshot of the most useful notes, then attach or paste it into the conversation (or add it to a Project).
 
+> Live clients with file access should prefer the tiered flow: digest → index → excerpt → full note. The pack is a fallback snapshot; for one-file clients, attaching the digest (`<vault>/.memory/MEMORY_DIGEST.md`) is even cheaper. Build both with the scripts in this repo.
+
 ## Build a pack
 
 From the installed skill folder (or this repository):
